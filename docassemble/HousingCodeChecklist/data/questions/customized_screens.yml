@@ -1,0 +1,965 @@
+---
+include:
+  - docassemble.ALToolbox:phone-number-validation.yml
+---
+#########################################################
+# Screens for included templates that override default screens
+#########################################################
+---
+###############
+# Used in multiple templates
+###############
+---
+id: who is using this interview
+question: |
+  How are you using this website?
+fields:
+  - I am: person_answering
+    datatype: radio
+    choices:
+      - A tenant: tenant
+      - An attorney or paralegal: attorney
+      - Someone **else** helping a tenant: tenant_helper
+  - Will you file an appearance?: representation_type
+    input type: radio
+    choices:
+      - Yes. I am entering an appearance.: entering_appearance
+      - No. I am only helping "ghostwrite" this document.: ghostwriting
+    show if:
+      variable: person_answering
+      is: attorney
+  - Would you like to customize the footer?: customize_footer
+    datatype: yesnoradio
+    show if:
+      variable: representation_type
+      is: ghostwriting
+  - note: |
+      This custom option is mainly for legal aid organizations with a standard practice of inserting their organization's name in the footer of the document. Example: "Prepared with assistance of [legal aid organization name]".
+  
+      Lawyers should not customize the footer and must put "Prepared with assistance of counsel". See [Trial Court Rule XVI]( https://www.mass.gov/trial-court-rules/trial-court-rule-xvi-uniform-rule-on-limited-assistance-representation#9-assisting-a-party-to-prepare-court-documents).
+    show if:
+      variable: representation_type
+      is: ghostwriting
+  - Organization name: org_name
+    input type: combobox
+    choices: 
+      - Greater Boston Legal Services
+      - Northeast Legal Aid
+      - Community Legal Aid
+      - Metro West Legal Services
+      - South Coastal Counties Legal Services
+    show if: customize_footer
+  - note: |
+      **Okay. The court documents will state "Prepared with assistance of counsel" in the footer.**
+    show if:
+      variable: customize_footer
+      is: False
+---
+depends on:
+  - document_choice["sue_landlord"]
+code: |
+  landlord_name_is_optional = not screen_ll_knows_problem or not document_choice.get("sue_landlord")
+  if landlord_name_is_optional:
+    ll_name_unknown = False
+---
+if: |
+  not landlord_name_is_optional
+id: names of opposing parties name required
+question: |
+  What is your landlord's name?
+subquestion: |
+  Write the name of your landlord, not your property manager. The landlord
+  is the person who owns the building. You can find out who owns the building
+  at [masslandrecords.com](https://www.masslandrecords.com/). The landlord is 
+  also usually the name you write on a rent check. 
+fields:
+  - Is your home owned by an individual or a business?: other_parties[0].person_type
+    input type: radio
+    choices:
+      - Business or organization: business
+      - Individual: individual
+  - Landlord's first name: other_parties[0].name.first
+    show if:
+      variable: other_parties[0].person_type
+      is: "individual"
+  - Last name: other_parties[0].name.last
+    show if:
+      variable: other_parties[0].person_type      
+      is: "individual"
+  - Suffix: other_parties[0].name.suffix
+    code: |
+      name_suffix()
+    show if:
+      variable: other_parties[0].person_type      
+      is: "individual"
+    required: False
+  - Landlord's business name: other_parties[0].name.first
+    show if:
+      variable: other_parties[0].person_type
+      is: business
+validation code: |
+  ll_name_unknown = False
+---
+if: |
+  landlord_name_is_optional
+id: names of opposing parties name not required
+question: |
+  What is your landlord's name?
+subquestion: |
+  Write the name of your landlord, not your property manager. The landlord
+  is the person who owns the building. Usually it is also the name you
+  write on a rent check.
+fields:
+  - I do not know my landlord's name: ll_name_unknown
+    datatype: yesno
+  - note: |
+      **Okay**. You can still fill in this form, but you will need
+      to write in your landlord's name on every form before you deliver
+      it. You may be able to find their name by visiting the Registry of
+      Deeds for your city or town.
+    show if: ll_name_unknown
+  - Is your landlord an individual or a business?: other_parties[0].person_type
+    input type: radio
+    choices:
+      - Business or organization: business
+      - Individual: individual
+    hide if: ll_name_unknown      
+  - Landlord's first name: other_parties[0].name.first
+    show if:
+      variable: other_parties[0].person_type
+      is: "individual"
+  - Last name: other_parties[0].name.last
+    show if:
+      variable: other_parties[0].person_type      
+      is: "individual"
+  - Suffix: other_parties[0].name.suffix
+    code: |
+      name_suffix()
+    show if:
+      variable: other_parties[0].person_type      
+      is: "individual"
+    required: False
+  - Landlord's business name: other_parties[0].name.first
+    show if:
+      variable: other_parties[0].person_type
+      is: business
+validation code: |
+  if ll_name_unknown:
+    other_parties[0].name.first = "[ Landlord's Name ]"
+---
+id: tenant contact information
+question: |
+  What is your contact information?
+subquestion: |
+  % if screen_ll_knows_problem and document_choice['sue_landlord']:
+  The court may need to call you to set up a hearing. If you
+  do not have your own phone number or email, consider using
+  a phone number that belongs to a trusted friend or family member.
+  % endif
+fields:  
+  - Mobile number: users[0].mobile_number
+    required: False
+    datatype: al_international_phone
+  - Other phone number: users[0].phone_number
+    required: False
+    datatype: al_international_phone
+  - Email address: users[0].email    
+    datatype: email
+    required: False
+  - I do not have any of these: users[0].no_contact_method
+    datatype: yesno
+    disable others: True
+validation code: |
+  if users[0].no_contact_method:
+    users[0].phone_number = users[0].mobile_number = users[0].email = ""    
+  if (not showifdef('users[0].phone_number') and \
+      (not showifdef('users[0].mobile_number')) and \
+      (not showifdef('users[0].email')) and \
+      (not users[0].no_contact_method)
+  ):
+    validation_error(word("You need to provide at least one contact method, or state that you do not have any."), field="users[0].mobile_number")
+---
+id: landlord's contact information
+generic object: ALIndividual
+question: |
+  How can ${ other_parties } be contacted?
+subquestion: |
+  If you do not know, you can leave this screen blank.  
+
+  ${ collapse_template(why_need_ll_contact_information_template) }
+fields:
+  - ${ other_parties.familiar() }'s phone number: other_parties[0].phone_number
+    datatype: al_international_phone
+    required: False
+  - ${ other_parties.familiar() }'s email address: other_parties[0].email
+    datatype: email
+    required: False
+---
+template: why_need_ll_contact_information_template
+subject: |
+  Why do you need my landlord's contact information?
+content: |
+  Your landlord's contact information will be written
+  on the documents that this website creates.
+
+  The court may use the number or email to pick a time
+  for you and your landlord to come into court.
+---
+id: your name
+question:  |
+  % if person_answering == "tenant":
+  Your name
+  % else:
+  Tenant's name
+  % endif
+fields:
+  - First: users[0].name.first
+  - Middle: users[0].name.middle
+    required: False
+  - Last: users[0].name.last
+  - Suffix: users[0].name.suffix
+    code: |
+      name_suffix()
+    required: False
+---
+id: persons address
+generic object: Individual
+question: |
+  % if person_answering == "tenant":
+  What is your address?
+  % else:
+  What is ${ users.familiar() }'s address?
+  % endif
+fields:
+  - Street Address: users[0].address.address
+    address autocomplete: True
+  - Unit: users[0].address.unit
+    required: False
+  - City: users[0].address.city
+  - State: users[0].address.state
+    default: MA   
+    code: |
+      states_list()   
+  - Zip Code: users[0].address.zip
+    required: False    
+---
+id: attorneys name
+question: |
+  % if person_answering == "attorney":
+  **Your** name
+  % else:
+  Attorney's name
+  % endif
+fields:
+  - Law firm or organization name: users[0].attorney.organization
+  - First: users[0].attorney.name.first
+    default: |
+      % if user_logged_in():
+      ${ user_info().first_name }
+      % endif
+  - Middle: users[0].attorney.middle
+    required: False
+    default: |
+      % if user_logged_in():
+      % endif    
+  - Last: users[0].attorney.name.last
+    default: |
+      % if user_logged_in():
+      ${ user_info().last_name }
+      % endif
+  - Suffix: users[0].attorney.name.suffix
+    code: |
+      sorted(name_suffix() + ["Esq."])
+    required: False
+    default: |
+      % if user_logged_in():
+      Esq.
+      % endif
+  #- Save my information for later: save_attorney_name
+  #  datatype: yesno
+---
+id: persons signature
+generic object: ALIndividual
+question: |
+  ${x}, please sign below or tap "next" to sign later
+signature: x.signature
+required: False
+under: |
+  ${x}
+progress: 99
+---
+id: signature choice with complaint
+if: |
+  'sue_landlord' in document_choice.true_values()
+decoration: file-signature
+question: |
+  Your documents are almost ready
+subquestion: |
+  How do you want to sign them?
+fields: 
+  - I will sign: signature_choice
+    input type: radio
+    choices:
+      - On a phone with my finger: phone
+        help: |
+          We can text or share a link with your phone on the next screen
+      - On a computer with my mouse: this_device
+      - On the paper with a pen after I print the documents: sign_after_printing
+  - no label: users[0].states_above_true
+    datatype: checkboxes
+    minlength: 1
+    choices:
+      - I affirm that the answers I have given are true, under the pains and penalties of perjury: states_true
+    validation messages:
+      minlength: |
+        You cannot keep going unless you did your best to tell the truth.
+    js show if: |
+      val("signature_choice") == "phone" || val("signature_choice") == "this_device" 
+continue button field: saw_signature_choice        
+---
+id: signature choice no complaint
+if: |
+  not 'sue_landlord' in document_choice.true_values()
+decoration: file-signature
+question: |
+  Your documents are almost ready
+subquestion: |
+  How do you want to sign them?
+fields: 
+  - I will sign: signature_choice
+    input type: radio
+    choices:
+      - On a phone with my finger: phone
+        help: |
+          We can text or share a link with your phone on the next screen
+      - On a computer with my mouse: this_device
+      - On the paper with a pen after I print the documents: sign_after_printing
+continue button field: saw_signature_choice        
+---
+id: move in date
+question: |
+  When did you move in to ${ users[0].address.on_one_line() }?
+fields:
+  - Date: users[0].move_in_date
+    datatype: ThreePartsDate
+---
+code: |
+  if len(bad_conditions[i].details.elements):
+    bad_conditions[i].min_date = min([c.start_date if not c.condition_existed_at_start else users[0].move_in_date for c in bad_conditions[i].details.elements.values()])
+  else:
+    bad_conditions[i].min_date = today()
+---
+code: |
+  tenant_repair_default_date = min([c.min_date for c in bad_conditions.elements.values()])                                  
+---
+id: include citations?
+question: |
+  Do you want to include a citation to the Sanitary Code?
+subquestion: |
+  If you want, you can include a citation to the Sanitary Code next to each condition in your letter.
+
+  Example:
+  
+  > ${ bad_conditions.active_conditions().item(0).description or bad_conditions.active_conditions().item(0).original_description } (C.M.R. ${ bad_conditions.active_conditions().item(0).code })
+fields:
+  - Citation style: sanitary_code_citation_style
+    datatype: radio
+    choices:
+      - Include the specific Sanitary Code citation: detailed_cites
+      - Just say what the problem is: no_detailed_cites
+---
+template: tenant_repair_issue_description_default
+content: |
+  % for condition in bad_conditions.active_conditions():
+  % if condition.description:
+  * ${ condition.description.capitalize() }
+  % else:
+  * ${ condition.original_description }
+  % endif
+  % if sanitary_code_citation_style == "detailed_cites":
+  (C.M.R. ${ condition.code })
+  % endif
+  % endfor
+---
+###############
+# Repair request letter
+###############
+---
+code: |
+  tenant_repair_issue_date 
+---
+id: tenant_repair_issue_date
+question: |
+  When did you first experience the problems that you want to tell
+  ${ other_parties } about?
+subquestion: |
+  The date below will be the date of any problems in your apartment when you first moved in.
+  
+  Make a change if you need to.
+fields:
+  - Earliest date: tenant_repair_issue_date
+    datatype: ThreePartsDate
+    default: ${ tenant_repair_default_date }
+---
+id: issue description
+question: |
+  Describe the problems that you want your landlord to fix
+subquestion: |
+  We used the problems that you selected to start a draft.
+  
+  % if sanitary_code_citation_style == "detailed_cites":
+  We also included a link to the Sanitary Code section that applies.
+  % endif
+fields:
+  - Describe the problem you want your landlord to fix: tenant_repair_issue_description
+    label above field: True
+    datatype: area
+    rows: 6
+    default: ${ tenant_repair_issue_description_default }
+---
+#################################################################
+# Withholding rent
+#################################################################
+---
+code: |
+  repairs_request_date = tenant_repair_issue_date # From 
+---
+id: Issue s Description
+question: |
+  What problems do you need your landlord to fix?
+subquestion: |
+  Use your own words to describe the problems that you told your landlord about
+  on or before ${ repairs_request_date }.
+fields:
+  - no label: rent_withholding_conditions
+    input type: area
+    rows: 5
+    default: ${ tenant_repair_issue_description_default }
+---
+##################################################################
+# Organizing tenants
+##########################
+---
+continue button field: organizing_interstitial
+id: organizing
+question: |
+  Work together with your neighbors
+subquestion: |
+  You are stronger together!
+  A tenant's union is a group of tenants working together. Your local tenant's
+  union may have:
+  
+  1. Regular meetings to talk about problems with neighbors.
+  1. Organizers who will negotiate with your landlord.
+  1. Protests to help defend tenant's rights.
+    
+  % if hasattr(users[0].address, 'norm_long') and hasattr(users[0].address.norm_long, 'city'):
+  % if users[0].address.norm_long.city in ['Saugus', 'Revere', 'Everett', 'Chelsea', 'Winthrop', 'Boston', 'Milton', 'Quincy', 'Braintree', 'Hingham', 'Weymouth', 'Somerville', 'Cambridge', 'Watertown', 'Arlington', 'Medford', 'Newton', 'Framingham', 'Lynn', 'East Boston', 'Springfield']:
+  Here are some tenant unions that cover the city you live in:
+  
+  % endif
+  % if users[0].address.norm_long.city in ['Saugus', 'Revere', 'Everett', 'Chelsea', 'Winthrop', 'Boston', 'Milton', 'Quincy', 'Braintree', 'Hingham', 'Weymouth', 'Somerville', 'Cambridge', 'Watertown', 'Arlington', 'Medford', 'Newton', 'Framingham']:
+  #### [City Life/Vida Urbana](https://www.clvu.org/)
+  
+  284 Amory Street, First Floor, Jamaica Plain, MA 02130
+  
+  ${ tel("(617) 524-3541") }
+  
+  % endif
+  % if users[0].address.norm_long.city in ['Chelsea','Revere','Everett','Lynn','East Boston']:
+  #### [La Colaborativa / Chelsea Collaborative](https://www.la-colaborativa.org/)
+  
+  318 Broadway, Chelsea, MA 02150
+  
+  ${ tel("(617) 889-6080") }
+  % endif
+  % if users[0].address.norm_long.city  == 'Lynn':  
+  
+  #### [Lynn United for Change](http://www.lynnunited.org/housing)
+  112 Exchange St, Lynn, MA 01901
+  
+  ${ tel("(781) 346-9199") }
+  % endif
+  % if users[0].address.norm_long.city == 'Boston':
+  #### Boston Tenant's Union
+  ${ tel("617-209-9263") }
+  % endif
+  % if users[0].address.norm_long.city  == 'Springfield':
+  #### [Springfield No one Leaves](http://www.springfieldnooneleaves.org/)
+  
+  ${ tel("413-342-1804") }
+  % endif
+  % if users[0].address.norm_long.city == 'Somerville':
+  #### [Community Action Agency of Somerville (CAAS)](https://www.caasomerville.org/community-organizing)
+  66-70 Union Square, Suite 204, Somerville, MA 02143
+  
+  ${ tel("617-539-6282") }
+  % endif
+  % endif  
+  
+  Tenant groups in Massachusetts:
+  
+  * [City Life/Vida Urbana](https://www.clvu.org) (metro Boston)
+  * [Community Action Agency of Somerville (CAAS)](https://www.caasomerville.org/community-organizing) (Somerville)
+  * [La Colaborativa](https://www.la-colaborativa.org/) (Chelsea and neighboring cities)
+  * [Lynn United](http://www.lynnunited.org/housing) (Greater Lynn)
+  * [Springfield No One Leaves](http://www.springfieldnooneleaves.org/) (Greater Springfield)
+  * [Boston Tenant's Union](https://bostontenantsunion.org/)
+---
+######################################################
+# Generic topic templates
+######################################################
+---
+template: how_to_document_template
+subject: |
+  Document the problem
+content: |
+  Keeping good records is important. Before you can get a problem fixed,
+  you need to be able to tell your landlord and the court where the problem
+  is.
+  
+  You can use this website to record problems and upload pictures.
+  
+  You could also:
+  
+  * Use your phone or a camera to take pictures of the problems.
+  * Use a thermometer or a photo of your thermostat and write down the
+    time and date of each recording.
+  
+  The best records come from a housing inspector. See the information below
+  about calling an inspector.
+---
+template: how_to_notify_landlord_template
+subject: |
+  Notify your landlord
+content: |
+  Your landlord is only responsible to fix problems that they know about.
+  Make sure your landlord knows about problems in your house by telling them,
+  even if you think that they should already know.
+  
+  Use a way to tell your landlord that you can track and prove.
+  
+  * Write your landlord a text message.
+  * Write a letter on paper, and keep a copy for yourself. Make sure the date
+    is on the letter.
+  * Write an email.
+  
+  You can use this website to tell your landlord about the problems in your
+  home.
+---
+template: get_inspection_template
+subject: |
+  Call a housing inspector
+content: |
+  A housing inspector is someone who works for the city or the housing 
+  authority.
+  
+  If you live in public housing or have a Section 8 voucher, the Housing
+  Authority will inspect your home at least once a year. But you can call if 
+  you need them to come sooner.
+  
+  All tenants, including tenants who live in public housing, can call a city
+  inspector. The city inspector should come within 1 day to inspect emergency
+  problems.
+  
+  In Boston, Cambridge, Chelsea, and Worcester you can call the Inspectional
+  Services Division.
+  
+  In other cities and towns, call the Board of Health.
+  
+  Before calling the inspector, use this website to create and print a list of 
+  the problems that you have identified. This will help make sure that the
+  inspector does not miss any problems.
+
+  [Learn more](https://www.masslegalhelp.org/housing/lt1-chapter-8-getting-inspection).
+---
+template: how_to_defend_eviction_template
+subject: |
+  Stop your eviction
+content: |
+  Sometimes a landlord will file an eviction case against a tenant if they
+  complain about problems in their house.
+  
+  This is illegal. In Massachusetts, evicting a tenant because they complained
+  about bad housing conditions or other housing problems is called
+  "retaliation". [Law about retaliation](https://www.masslegalhelp.org/housing/lt1-chapter-12-illegal-eviction).
+  
+  Even if your landlord is not evicting you **because** you complained about
+  problems in your house, the problems may be a defense to your eviction.
+  [239 &sect; 
+  8A](https://malegislature.gov/Laws/GeneralLaws/PartIII/TitleIII/Chapter239/Section8A) 
+  makes bad housing conditions a defense to an eviction if:
+  
+  1. The eviction is for nonpayment of rent or for no reason.
+  1. The problems threaten the health and safety of someone who lives in the
+    apartment.
+  1. The landlord knew about the problems at a time that the tenant did not
+  owe any rent.
+  1. The problems were not caused by the tenant.
+  1. The problems can be fixed without the tenant moving out permanently.
+  
+  You can defend against your eviction with MADE, Massachusetts Defense
+  Against Eviction.
+  
+  ${ action_button_html('https://interviews.gbls.org/start/eviction', label='Launch MADE') }
+---
+template: sue_your_landlord_template
+subject: |
+  Sue your landlord for money
+content: |
+  You have a right to sue your landlord for money if you have problems in
+  your home that your landlord is responsible to fix.
+  
+  You may be able to sue as part of an existing eviction case. Or you can
+  file your own case against your landlord.
+  
+  It is a good idea to [talk to a lawyer](https://masslrf.org/en/triage/start/housing). You may be able to get a lawyer who will help you for free.
+  
+  You can sue for:
+  
+  * Breach of Quiet Enjoyment, which may entitle you to up to 3 months of rent,
+    at the market rent for your apartment.
+  * Breach of the Warranty of Habitability, which may entitle you to a
+    percentage of your rent for every month that the problem existed.
+    
+  [Read MassLegalHelp.org's article about suing your landlord](https://www.masslegalhelp.org/housing/lt1-pullout-13-taking-landlord-to-court).
+---
+############################################
+# Housing TRO
+############################################
+---
+id: landlords actions
+question: |
+  Your landlord's actions
+subquestion: |
+  This form allows you to ask for emergency help for something your landlord did
+  or failed to do. Please give us some information about what happened.
+fields:
+  - 'When did the issue start?': incident_date
+    datatype: ThreePartsDate
+    default: ${ tenant_repair_default_date }
+  - 'My landlord illegally locked me out of the apartment or moved my belongings out, or threatened to do so': incident_locked_out
+    datatype: yesno
+  - 'My utilities were shut off': incident_utility
+    datatype: yesno
+  - 'Explain what utility was shut off, and when': incident_utility_description
+    show if: incident_utility
+  - Did not repair problems in my house, or other breach of quiet enjoyment: incident_other
+    datatype: yesno
+    default: True
+  - 'Describe the other thing your landlord did wrong': incident_other_description
+    maxlength: 990
+    datatype: area
+    default: ${ tenant_repair_issue_description_default }
+    show if: incident_other
+    help: |
+      You can include anything here that is a breach of your right to
+      "quiet enjoyment" of your home. For example: an unsafe living condition;
+      an odor or noise that makes your home unlivable; or anything that 
+      makes you unable to use your home safely and peacefully.
+validation code: |
+  if not incident_locked_out and not incident_utility and not incident_other:
+    validation_error("You must select at least one incident.")
+help: |
+  #### What is a breach of quiet enjoyment?
+  A breach of quiet enjoyment is something that your landlord did or should
+  have done that makes your home unlivable. This can cover a lot of different
+  issues. The problem needs to be serious and you can get help for issues
+  that the court agrees are emergencies with this form.
+  
+  Examples might include:
+  
+  * A sewage backup in your basement
+  * A strong unpleasant odor
+  * Constant noise at unreasonable times of day (remember, even if you are
+  working from home, permitted construction may still be allowed)
+  * Unsafe living conditions that your landlord isn't fixing
+  
+  [Read more](https://www.masslegalhelp.org/housing/lt1-chapter-8-rights-decent-place-live)
+---
+#########################################
+## Petition to enforce Sanitary Code
+#########################################
+#---
+#id: no inspection kickout
+#question: |
+#  You need to have an inspection in order to enforce the inspection
+#subquestion: |
+#  In order to file the Petition properly you need to have an inspection report or an inspection scheduled at least 24 hours before the filing of this petition.
+#
+#  Contact your town offices to find out how to schedule an inspection.
+#  
+#  We will leave this form out of your final packet.
+#continue button field: kick_out
+#---
+event: review_request_housing_inspection
+question: |
+  Review your request for a housing inspection
+review:
+  - Edit: users[0].name.first
+    button: |
+      Your name: ${ users[0] }
+  - Edit: review_conditions
+    button: |
+      ${ review_conditions_template }
+  - Edit: users[0].address.address
+    button: |
+      Your address: ${ users[0].address_block() }      
+  - Edit: other_parties[0].name.first
+    button: |
+      Your landlord's name: ${ other_parties[0] }
+  - Edit: other_parties[0].address.address
+    button: |
+      Your landlord's address: ${ other_parties[0].address.address }
+---
+if: |
+  # this should only be reached if the user's address is out of state
+  not len(all_matches) and all_courts.filter_courts(allowed_courts) 
+sets:
+  - trial_court
+id: choose a court (no matching courts found)
+question: |
+  What court do you want to file in?
+subquestion: |
+  Most tenants file in the Housing Court.
+  
+  ${ collapse_template(housing_how_to_pick_court_help_template) }
+fields:
+  - no label: trial_court
+    datatype: object
+    object labeler: court_short_label
+    choices: all_courts.filter_courts(allowed_courts) 
+---
+if: |
+  len(all_matches) and all_courts.filter_courts(allowed_courts) 
+id: choose a court (courts matching provided address were found)
+question: |
+  What court do you want to file in?
+subquestion: |
+  Most tenants file in the Housing Court.
+
+  ${ collapse_template(housing_how_to_pick_court_help_template) }
+
+  % if len(all_matches) > 0:
+  Below is a map of the court(s) that serve
+  the address you gave us, 
+  % if isinstance(addresses_to_search, Iterable):
+  ${comma_and_list([address.on_one_line() for address in addresses_to_search],comma_string='; ')}.
+  % else:
+  ${addresses_to_search.on_one_line()}
+  % endif
+  
+  ${map_of(combined_locations(all_matches))}
+  % endif
+  
+fields:
+  - no label: trial_court
+    datatype: object_radio
+    choices: all_matches
+    none of the above: My court is not listed
+    disable others: True
+    object labeler: court_short_description
+    show if: 
+      code: |
+        len(all_matches)
+    default: |
+      all_courts.matching_housing_court(users[0].address)
+  - label: |
+      Does the list above look wrong? If you know that you can
+      file in a court we didn't list, choose from the full list below.
+    label above field: True      
+    field: trial_court
+    datatype: object
+    object labeler: court_short_label
+    choices: all_courts.filter_courts(allowed_courts)
+    show if:
+      variable: trial_court
+      is: None
+---
+template: housing_how_to_pick_court_help_template
+subject: |
+  How do I pick a court?
+content: |
+  How do you know which court to choose?
+
+  Housing cases can be filed in one of 4 kinds of courts:
+
+  * Housing Court  
+  * District Court
+  * Boston Municipal Court (BMC)
+  * Superior Court
+
+  Most tenants choose the Housing Court. If your Housing Court is
+  far away or hard to get to, you may decide to file in the District
+  Court or Boston Municipal Court.
+
+  Unless you have talked to an attorney and have a special reason, you should
+  not file in the Superior Court.
+  
+  The District Court, BMC, and Superior Court are all courts that can hear
+  any type of case. Housing Court is a
+    **specialist** court that hears only housing cases.
+  They have judges with special training as well as special 
+  resources available.
+    
+  Depending on where you live, different courts may be further or closer to
+  your address. There are about 100 district courts all over the state,
+  but each county has only one or a few Superior Courts or specialty
+  courts.
+  
+  Choosing a court means thinking about what kind of help you need, as well
+  as which court you can get transportation to on the day of your hearing.
+  
+  Only you know the right choice.
+  
+  You can also view the court selection guidance at [mass.gov](https://www.mass.gov/courthouse-locator).
+---
+sets:
+  - users[0].attorney.address.address
+id: attorney information
+question: |
+  % if person_answering == "attorney":
+  Information for your appearance as attorney for ${ users.familiar() }
+  % else:
+  Your attorney's contact information
+  % endif
+fields:
+  - BBO number: users[0].attorney.bbo_number
+    required: False
+  - code: |
+      users[0].attorney.address_fields(default_state="MA")
+  - Phone: users[0].attorney.phone_number
+    datatype: al_international_phone
+    required: False
+  - Email: users[0].attorney.email
+    datatype: email
+    required: False
+---
+id: How much compensation would you like to claim from the landlord with bad_conditions defined
+question: |
+  What amount of money would be fair for your landlord to pay you?
+subquestion: |
+  ${ collapse_template(settlement_offer_93a_explanation) }
+  
+  ${ collapse_template(what_if_problem_over_multiple_periods) }
+
+  The amount that you list here will be your "settlement offer".    
+fields:
+  - How do you want to decide the amount to ask for?: damage_calculation_method
+    datatype: radio
+    choices:
+      - Let me do my own math: tenant_calculation
+      - Help me with the math: uptocode_calculation
+      - Do not ask for a specific settlement amount: skip_amount
+  - How serious were the problems?: damage_tenant_severity_estimate
+    datatype: radio
+    choices:
+      - The apartment was unlivable: bqe_total
+        help: |
+          You can choose this answer even if you did not move out.
+      - The problems were serious but not unlivable: bqe_partial
+    show if:      
+      variable: damage_calculation_method
+      is: uptocode_calculation
+  - How long did you have the problems (in days)?: tenant_time_estimate
+    datatype: number
+    show if:
+      variable: damage_calculation_method
+      is: uptocode_calculation
+    default: ${ bad_conditions.conditions_days(default_date=users[0].move_in_date) }
+    help: |
+      The default number, ${ bad_conditions.conditions_days(default_date=users[0].move_in_date) }, was calculated from the oldest and
+      newest problems you listed earlier.
+  - What **percentage** do you think is fair to get off of the rent for each month that you had the problems?: tenant_percentage_estimate
+    datatype: range
+    min: 0
+    max: 100
+    step: 5
+    default: 0
+    show if:
+      variable: damage_calculation_method
+      is: uptocode_calculation
+    help: |
+      It is up to you to ask for a percentage you think is fair. A less serious problem might 
+      be 5% and a very serious problem might be 100%. The total amount cannot be more than 100%.
+      The percentage will be multiplied by the number of days, weeks or months you had the problem.
+    validate: |
+      lambda y: y > 0 or validation_error("Select a number greater than 0.")
+  - Settlement offer amount: tenant_self_estimated_damages_amount
+    datatype: currency
+    min: 0
+    show if:
+      variable: damage_calculation_method
+      is: tenant_calculation
+validation code: |
+  if damage_calculation_method == "uptocode_calculation":
+    tenant_time_estimate_denominator = 365
+    if tenant_percentage_estimate < 5:
+      validation_error("Select a percentage that is greater than 0", field="tenant_percentage_estimate")
+---
+template: about_page_contents
+subject: Terms of Use and Privacy Policy
+content: |
+  This website is free to use. Greater Boston Legal Services (“GBLS”), a nonprofit legal aid program, hosts the site.
+
+  And we include information from:
+
+  * Northeast Legal Aid
+  * Massachusetts Law Reform Institute
+  * Massachusetts Legal Assistance Corporation
+
+  <h3 class="h5">You need to know</h3>
+
+  * **This website does not provide legal advice**. If you need legal advice, you can use [Massachusetts Legal Resource Finder](https://masslrf.org) to find a lawyer.
+  * The information and documents on this website have no warranty. We provide the information “as-is.” By using the site, you agree not to hold GBLS or the information providers on this site liable.
+  * We work hard to keep the information on the site up to date. Lawyers drafted and reviewed the documents this site uses. But laws and local rules change over time. These changes can make a document unenforceable when you use it.
+  * We do our best to keep the site working! To do that, we allow you to submit feedback so we can track problems on the site. But we cannot provide individual technical support.
+
+  <h3 class="h5">To use this site</h3>
+
+  * You need to be over 13.
+  * This site is for **anyone** 13 and over. For example: you can be the person who needs the help, a lawyer, or a social worker.
+  * You may not sell the information or the contents of this site. But you can charge for your own time.
+  * Please keep your use fair. Do not use this site in a way that is illegal or that makes it harder for other people to use.
+
+  <h3 class="h5">Information we and others collect</h3>
+
+  * We collect the information that you type to help you complete your forms. We delete all information 180 days after you last update it. You can also delete information immediately.
+  * We log information including IP addresses and web browsers from all visitors. We use this information to keep our site secure. We keep logs for up to 180 days.
+  * We use Google Maps to help fill in addresses automatically. This feature sends your IP address to Google Maps to get your approximate location.
+  * We use Google Analytics to learn how people use our website. This helps us understand which pages are hardest to use. Google may use this information to show you better advertisements.
+  * We use email and text message delivery services that may keep their own records of any messages you send. If you choose to log in with your phone number, this may include a record of the times you log in to the site.
+
+  <h3 class="h5">We keep your information safe</h3>
+
+  * We use the same technology that banks and online stores use to keep your information safe. We use:
+  * 256 bit encryption
+  * Software firewalls
+  * Limited access controls
+  * Continual monitoring
+  * Regular security updates
+
+  <h3 class="h5">Sharing your information</h3>
+
+  * We never sell your information.
+  * We share anonymous information with a small number of nonprofits and researchers. We use the information to improve our site and to improve free legal help in Massachusetts.
+  * When you visit some pages of the site, the site may ask if you want to apply to get a free lawyer from legal aid. You get to decide if you want to share your personal information.
+  * You may choose to email completed forms or share a link to your in-progress work at any time to any person.
+
+  <h3 class="h5">These Terms of Use can change</h3>
+
+  We may change these Terms of Use at any time with no notice. Please review the terms on a regular basis to see any changes.
+
+  If you use the site after we make changes, you accept our changed Terms of Use.
+
+  <h3 class="h5">The laws of Massachusetts apply to these Terms of Use</h3>
+
+  If a judge decides that one of the terms in this Terms of Use is unenforceable, it will not change the terms that remain.
+
+  <h3 class="h5">If you still have questions</h3>
+
+  Write to:
+
+  Greater Boston Legal Services  
+  197 Friend Street  
+  Boston, MA 02114

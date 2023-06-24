@@ -1,0 +1,419 @@
+---
+############################################
+# Language support
+############################################
+---
+modules:
+  - docassemble.AssemblyLine.language
+---
+code: |
+  metadata_title = "UpToCode"
+---
+initial: True
+code: |
+  process_action()
+---
+initial: True
+code: |
+  set_language(user_language)
+---
+code: |
+  if url_args.get('lang'):
+    user_language = url_args.get('lang')
+  else:
+    user_language= 'en'
+---
+event: change_language
+code: |
+  if 'lang' in action_arguments():
+    user_language = action_argument('lang')
+    set_language(user_language)
+---
+#comment: |
+#    % if get_config('debug'):
+#    `id: ${ user_info().question_id }`  
+#    `Package: ${ user_info().package } ${ package_version_number }; ${ al_version }`
+#    <div data-variable="${ encode_name(str( user_info().variable )) }" id="sought_variable" aria-hidden="true" style="display: none;"></div>
+#    % endif  
+# default screen parts:
+#  pre: |    
+    # ${get_language_list(get_tuples(['en','es','pt','ht']),current=user_language)}
+---
+depends on:
+  - user_language
+language: es
+variable name: available_buttons
+data:
+  - value: emergency
+    label: Emergencia
+    image: first-aid
+  - value: Living area
+    label: Espacio vital
+    image: couch
+  - value: Bedroom
+    label: Dormitorio    
+    image: bed    
+  - value: Bathroom
+    label: Baño
+    image: bath
+  - value: Kitchen
+    label: Cocina
+    image: utensils  
+  - value: Porch and balcony
+    label: Porche y balcón
+    image: store    
+  - value: Exits
+    label: Salidas
+    image: door-open
+  - value: Lead paint
+    label: Pintura con plomo
+    image: paint-roller
+  - value: Safety
+    label: Seguridad
+    image: unlock-alt    
+  - value: Heat
+    label: Calefacción
+    image: thermometer-full
+  - value: Lighting
+    label: La iluminación
+    image: lightbulb    
+  - value: Electricity and Gas
+    label: Electricidad y Gas
+    image: plug
+  - value: Water
+    label: Agua
+    image: faucet    
+  - value: Garbage
+    label: Basura
+    image: trash-alt
+  - value: Rodents and insects
+    label: Roedores e insectos
+    image: bug
+  - value: Building Structure
+    label: Estructura de construcción
+    image: hard-hat        
+  - value: General Maintenance
+    label: Mantenimiento
+    image: tools
+---
+language: es
+variable name: sub_documents
+data: !!omap
+  - get_report:
+      section_link: review_checklist
+      section_label: Mi lista de problemas
+      name: Mi lista de problemas
+      count: 2
+  - tell_landlord: 
+      section_link: review_tenant_repair_request
+      section_label: Dile a mi dueño
+      name: Dile a mi dueño
+      count: 2
+  - demand_letter_93a:
+      section_link: review_Repair_Demand_Letter
+      section_label: Escribir una carta de demanda
+      name: Escribir una carta de demanda
+      count: 2
+  #- share_with_tenants:
+  #    section_link: review_share_with_tenants
+  #    section_label: Tell other tenants
+  #    name: Share your information with other tenants
+  #    count: 0
+  - organize_tenants:
+      section_link: organizing_interstitial
+      section_label: Organizar a otros inquilinos    
+      name: Organizar a otros inquilinos
+      count: 0
+  - get_inspection: 
+      section_link: review_request_housing_inspection
+      section_label: Obtenga una inspecció
+      name: Obtenga una inspecció
+      count: 2
+  - fix_problems:
+      section_link: review_repair_and_deduct
+      section_label: Repararlo yo mismo
+      name: Repararlo yo mismo
+      count: 0
+  #- get_injunction:
+  #    section_link: review_housing_tro
+  #    section_label: Get a judge's order
+  #    name: Ask a judge for an injunction (order)
+  #    count: 8
+  - sue_landlord:
+      section_link: review_verified_complaint_and_motions
+      section_label: Demandar a mi dueño
+      name: Demandar a mi dueño
+      count: 10
+  - fee_waiver:
+      section_link: review_fee_waiver
+      section_label: Presente en la corte gratis
+      name: Presente en la corte gratis
+      count: 5      
+  - contempt_complaint:
+      section_link: review_Contempt_Complaint
+      section_label: Pide a un juez que haga cumplir su propia orden
+      name: Pide a un juez que haga cumplir su propia orden
+      count: 3
+---
+language: es
+sections:
+  - section_getting_started: Empezando
+  - review_conditions: Enumere sus problemas 
+  - document_choice: Elige tu solución
+  - provide_details: Responder a las preguntas
+  - preview_and_sign: Firmar
+  - download_conditions_checklist_docs: Descargar  
+auto open: True
+---
+depends on:
+  - user_language
+language: ht
+variable name: available_buttons
+data:
+  - value: emergency
+    label: Ijans
+    image: first-aid
+  - value: Living area
+    label: Zòn k ap viv  
+    image: couch
+  - value: Bathroom
+    label: Twalèt
+    image: bath
+  - value: Kitchen
+    label: Kizin
+    image: utensils        
+  - value: Bedroom
+    label: Chanm
+    image: bed  
+  - value: Porch and balcony
+    label: Porch ak balkon
+    image: store    
+  - value: Exits
+    label: Sòti
+    image: door-open
+  - value: Lead paint
+    label: Penti plon
+    image: paint-roller    
+  - value: Safety
+    label: Sekirite
+    image: unlock-alt        
+  - value: Heat
+    label: Chalè
+    image: thermometer-full
+  - value: Lighting
+    label: Ekleraj
+    image: lightbulb    
+  - value: Electricity and Gas
+    label: Elektrisite ak gaz
+    image: plug
+  - label: Water
+    value: Dlo
+    image: faucet    
+  - value: Garbage
+    label: Fatra
+    image: trash-alt
+  - value: Rodents and insects
+    label: Rat ak ensèk 
+    image: bug
+  - value: Building Structure
+    label: Estrikti bilding
+    image: hard-hat        
+  - value: General Maintenance
+    label: Antretyen jeneral
+    image: tools
+---
+depends on:
+  - user_language
+language: pt
+variable name: available_buttons
+data:
+  - value: emergency
+    label: Emergência
+    image: first-aid
+  - value: Living area
+    label: Sala-de-estar 
+    image: couch
+  - value: Bathroom
+    label: Banheiro
+    image: bath
+  - value: Kitchen
+    label: Cozinha
+    image: utensils        
+  - value: Bedroom
+    label: Quarto 
+    image: bed    
+  - value: Porch and balcony
+    label: Varanda e sacada 
+    image: store    
+  - value: Exits
+    label: Saídas 
+    image: door-open
+  - value: Lead paint
+    label: Tinta de Chumbo
+    image: paint-roller    
+  - value: Safety
+    label: Segurança 
+    image: unlock-alt        
+  - value: Heat
+    label: Aquecimento
+    image: thermometer-full
+  - value: Lighting
+    label: Iluminação
+    image: lightbulb
+  - value: Electricity and Gas
+    label: Eletricidade e Gás
+    image: plug
+  - value: Water
+    label: Água
+    image: faucet
+  - value: Garbage
+    label: Lixo
+    image: trash-alt
+  - value: Rodents and insects
+    label: Roedores e insetos
+    image: bug
+  - value: Building Structure
+    label: Estrutura do edifício
+    image: hard-hat        
+  - value: General Maintenance
+    label: Manutenção geral
+    image: tools
+---
+language: pt
+sections:
+  - section_getting_started: Começando
+  - review_conditions: Listar problemas 
+  - document_choice: Escolha uma solução
+  - provide_details: Responder a perguntas 
+  - preview_and_sign: Visualizar e assinar 
+  - download_conditions_checklist_docs: Download
+auto open: True  
+---
+language: ht
+sections:
+  - section_getting_started: Kòmanse
+  - review_conditions: Lis pwoblèm
+  - document_choice: Chwazi yon solisyon
+  - provide_details: Reponn kesyon yo
+  - preview_and_sign: Preview epi siyen
+  - download_conditions_checklist_docs: Telechaje
+auto open: True  
+---
+language: ht
+comment: |
+  Section labels for child interviews that have follow-up
+  questions
+variable name: sub_documents
+data: !!omap
+  - get_report:
+      section_link: review_checklist
+      section_label: Lis verifikasyon mwen an
+      name: Lis Verifikasyon Kòd Lojman ak Rapò Kondisyon
+      count: 2
+  - tell_landlord: 
+      section_link: review_tenant_repair_request
+      section_label: Di mèt kay mwen an 
+      name: Lèt bay mèt kay pou rapòte move kondisyon
+      count: 2
+  #- share_with_tenants:
+  #    section_link: review_share_with_tenants
+  #    section_label: Tell other tenants
+  #    name: Share your information with other tenants
+  #    count: 0
+  - organize_tenants:
+      section_link: organizing_interstitial
+      section_label: Òganize
+      name: Òganize ak lòt lokatè
+      count: 0
+  - get_inspection: 
+      section_link: review_request_housing_inspection
+      section_label: Jwenn yon enspeksyon 
+      name: Mande yon enspeksyon vil la 
+      count: 2
+  - fix_problems:
+      section_link: review_repair_and_deduct
+      section_label: Ranje pwoblèm yo tèt mwen
+      name: Fè reparasyon epi dedwi pri a nan lwaye mwen an
+      count: 0
+  #- get_injunction:
+  #    section_link: review_housing_tro
+  #    section_label: Get a judge's order
+  #    name: Ask a judge for an injunction (order)
+  #    count: 8
+  #- sue_landlord:
+  #    section_link: review_sue_landlord
+  #    section_label: Sue my landlord
+  #    name: Sue my landlord in court
+  #    count: 0
+  - sue_landlord:
+      section_link: review_verified_complaint_and_motions
+      section_label: Sue pwopriyetè m nan
+      name: Sue pwopriyetè m nan
+      count: 10
+  - fee_waiver:
+      section_link: review_fee_waiver
+      section_label: Depoze nan tribinal pou gratis
+      name: Depoze nan tribinal pou gratis
+      count: 5      
+  - contempt_complaint:
+      section_link: review_Contempt_Complaint
+      section_label: Mande jij pou fè respekte lòd pa yo
+      name: Mande jij pou fè respekte lòd pa yo
+      count: 3  
+---
+language: pt
+comment: |
+  Section labels for child interviews that have follow-up
+  questions
+variable name: sub_documents
+data: !!omap
+  - get_report:
+      section_link: review_checklist
+      section_label: Minha lista de verificação 
+      name: Lista de Verificação do Código de Habitação e Relatório de Condição
+      count: 2
+  - tell_landlord: 
+      section_link: review_tenant_repair_request
+      section_label: Diga ao meu senhorio
+      name: Carta ao proprietário para relatar más condições
+      count: 2
+  #- share_with_tenants:
+  #    section_link: review_share_with_tenants
+  #    section_label: Tell other tenants
+  #    name: Share your information with other tenants
+  #    count: 0
+  - organize_tenants:
+      section_link: organizing_interstitial
+      section_label: Organizar
+      name: Organize-se com outros inquilinos 
+      count: 0
+  - get_inspection: 
+      section_link: review_request_housing_inspection
+      section_label: Faça uma inspeção
+      name: Solicite uma vistoria municipal 
+      count: 2
+  - fix_problems:
+      section_link: review_repair_and_deduct
+      section_label: Corrigir os problemas sozinho 
+      name: Fazer reparos e deduzir o custo do meu aluguel 
+      count: 0
+  #- get_injunction:
+  #    section_link: review_housing_tro
+  #    section_label: Get a judge's order
+  #    name: Ask a judge for an injunction (order)
+  #    count: 8
+  - sue_landlord:
+      section_link: review_sue_landlord
+      section_label: Processar meu senhorio
+      name: Processar meu senhorio
+      count: 0
+  - fee_waiver:
+      section_link: review_fee_waiver
+      section_label: Isenção de custas judiciais
+      name: Isenção de custas judiciais
+      count: 5      
+  - contempt_complaint:
+      section_link: review_Contempt_Complaint
+      section_label: Peça ao juiz para fazer valer sua própria ordem
+      name: Peça ao juiz para fazer valer sua própria ordem
+      count: 3
