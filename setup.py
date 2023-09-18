@@ -44,14 +44,14 @@ def find_package_data(where='.', package='', exclude=standard_exclude, exclude_d
     return out
 
 setup(name='docassemble.HousingCodeChecklist',
-      version='1.20.5',
+      version='1.20.6',
       description=('Housing code checklist'),
       long_description='# docassemble.HousingCodeChecklist\r\n\r\nHousing code checklist\r\n\r\n## Author\r\n\r\nQuinten Steenhuis, with draft work completed as part of the Assembly Line project\r\nby students and volunteers.\r\n',
       long_description_content_type='text/markdown',
       author='Quinten Steenhuis',
       author_email='quinten@nonprofittechy.com',
       license='The MIT License',
-      url='https://madeuptcocode.org',
+      url='https://getuptocode.org',
       packages=find_packages(),
       namespace_packages=['docassemble'],
       install_requires=['docassemble.ALMassachusetts>=0.1.2', 'docassemble.AssemblyLine>=2.22.2', 'docassemble.MassAccess>=0.3.0'],
